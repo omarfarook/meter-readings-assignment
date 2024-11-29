@@ -32,7 +32,9 @@ async function processCsv(fileReader, csvParser, sqlGenerator, fileWriter) {
         });
       }
     } catch (error) {
-      console.error(`Error processing row: ${JSON.stringify(row)} - ${error.message}`);
+      console.error(
+        `Error processing row: ${JSON.stringify(row)} - ${error.message}`
+      );
     }
   }
 
@@ -42,7 +44,7 @@ async function processCsv(fileReader, csvParser, sqlGenerator, fileWriter) {
   csvParser.reportIssues();
 
   // Display a summary of processing
-  console.log(`Successfully processed rows: ${successfulRows}`);
+  console.log(`Total rows processed: ${successfulRows}. SQL statements successfully written to the output file.`);
 }
 
 module.exports = { processCsv };

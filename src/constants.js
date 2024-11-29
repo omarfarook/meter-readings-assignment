@@ -1,7 +1,7 @@
 // Record types
 const RECORD_TYPES = {
-    TYPE_200: '200',
-    TYPE_300: '300',
+    METER_CONFIGURATION: '200',
+    INTERVAL_DATA: '300',
   };
   
   // Column indices

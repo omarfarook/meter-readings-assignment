@@ -9,7 +9,7 @@ class CsvParser {
   constructor() {
     this.currentNmi = null;
     this.intervalLength = null;
-    this.problematicRows = [];
+    this.invalidRows = [];
   }
 
   /**
@@ -24,7 +24,7 @@ class CsvParser {
 
     const recordType = fields[COLUMN_INDICES.RECORD_TYPE];
 
-    if (recordType === RECORD_TYPES.TYPE_200) {
+    if (recordType === RECORD_TYPES.METER_CONFIGURATION) {
       this.currentNmi = fields[COLUMN_INDICES.NMI];
       this.intervalLength = parseInt(
         fields[COLUMN_INDICES.INTERVAL_LENGTH],
@@ -33,11 +33,11 @@ class CsvParser {
       return null;
     }
 
-    if (recordType === RECORD_TYPES.TYPE_300 && this.currentNmi) {
+    if (recordType === RECORD_TYPES.INTERVAL_DATA && this.currentNmi) {
       const intervalDate = fields[COLUMN_INDICES.INTERVAL_DATE];
 
       if (!isValidDate(intervalDate)) {
-        this.problematicRows.push({
+        this.invalidRows.push({
           row,
           reason: `Invalid interval date: ${intervalDate}`,
         });
@@ -61,7 +61,7 @@ class CsvParser {
               index
             );
             if (!timestamp) {
-              this.problematicRows.push({
+              this.invalidRows.push({
                 row,
                 reason: `Invalid timestamp at index ${index}`,
               });
@@ -73,7 +73,7 @@ class CsvParser {
               consumption: parseFloat(value),
             };
           } else {
-            this.problematicRows.push({
+            this.invalidRows.push({
               row,
               reason: `Invalid consumption value: ${value} at index ${index}`,
             });
@@ -84,7 +84,7 @@ class CsvParser {
     }
 
     // Log unrecognized rows
-    this.problematicRows.push({
+    this.invalidRows.push({
       row,
       reason: `Unrecognized record type: ${recordType}`,
     });
@@ -95,9 +95,9 @@ class CsvParser {
    * Reports all problematic rows encountered during parsing.
    */
   reportIssues() {
-    if (this.problematicRows.length > 0) {
-      console.warn("The following rows were problematic:");
-      this.problematicRows.forEach(({ row, reason }) => {
+    if (this.invalidRows.length > 0) {
+      console.warn(`The following rows were invalid (Total: ${this.invalidRows.length}):`);
+      this.invalidRows.forEach(({ row, reason }) => {
         console.warn(`Row: ${JSON.stringify(row)} - Reason: ${reason}`);
       });
     } else {
