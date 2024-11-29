@@ -1,4 +1,4 @@
-const { SqlGenerator } = require('../src/services/SqlGenerator');
+const { SqlGenerator } = require('../src/dataProcessing/SqlGenerator');
 const { validate: isUuid } = require('uuid');
 
 describe('SqlGenerator', () => {

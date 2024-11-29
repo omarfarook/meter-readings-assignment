@@ -1,4 +1,5 @@
 const { calculateTimestamp } = require('./timestampHelper');
+const { RECORD_TYPES, COLUMN_INDICES } = require('../constants');
 
 class CsvParser {
   constructor() {
@@ -14,16 +15,16 @@ class CsvParser {
   parseRow(row) {
     const fields = Object.values(row);
 
-    if (fields[0] === '200') {
-      this.currentNmi = fields[1];
-      this.intervalLength = parseInt(fields[8], 10);
+    if (fields[COLUMN_INDICES.RECORD_TYPE] === RECORD_TYPES.TYPE_200) {
+      this.currentNmi = fields[COLUMN_INDICES.NMI];
+      this.intervalLength = parseInt(fields[COLUMN_INDICES.INTERVAL_LENGTH], 10);
       return null;
     }
 
-    if (fields[0] === '300' && this.currentNmi) {
-      const intervalDate = fields[1];
+    if (fields[COLUMN_INDICES.RECORD_TYPE] === RECORD_TYPES.TYPE_300 && this.currentNmi) {
+      const intervalDate = fields[COLUMN_INDICES.INTERVAL_DATE];
       const intervalsPerDay = Math.floor(1440 / this.intervalLength);
-      const consumptions = fields.slice(2, 2 + intervalsPerDay);
+      const consumptions = fields.slice(COLUMN_INDICES.CONSUMPTION_START, 2 + intervalsPerDay);
 
       return consumptions.map((value, index) => {
         if (value && !isNaN(value)) {

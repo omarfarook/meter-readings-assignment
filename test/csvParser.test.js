@@ -1,4 +1,4 @@
-const { CsvParser } = require('../src/services/CsvParser');
+const { CsvParser } = require('../src/dataProcessing/CsvParser');
 
 describe('CsvParser', () => {
   it('should skip rows with invalid timestamps', () => {

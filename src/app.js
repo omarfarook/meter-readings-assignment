@@ -1,11 +1,18 @@
-const { processCsv } = require('./services/csvProcessor');
+const { FileReader } = require('./dataProcessing/FileReader');
+const { CsvParser } = require('./dataProcessing/csvParser');
+const { SqlGenerator } = require('./dataProcessing/SqlGenerator');
+const { FileWriter } = require('./dataProcessing/FileWriter');
+const { processCsv } = require('./dataProcessing/csvProcessor');
 
 (async () => {
   try {
-    const inputFile = 'data/example-data.csv'; // Input CSV file path
-    const outputFile = 'data/output.sql';     // Output SQL file path
-    await processCsv(inputFile, outputFile);
+    const fileReader = new FileReader('data/example-data.csv');
+    const csvParser = new CsvParser();
+    const sqlGenerator = new SqlGenerator();
+    const fileWriter = new FileWriter('data/output.sql');
+
+    await processCsv(fileReader, csvParser, sqlGenerator, fileWriter);
   } catch (error) {
-    console.error('Error processing file:', error);
+    console.error('Error processing CSV file:', error);
   }
 })();

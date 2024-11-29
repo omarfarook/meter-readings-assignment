@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { FileReader } = require('../src/services/FileReader');
+const { FileReader } = require('../src/dataProcessing/FileReader');
 
 jest.mock('fs'); // Mock the `fs` module
 
