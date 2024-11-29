@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 class FileWriter {
   constructor(filePath) {
@@ -14,29 +14,30 @@ class FileWriter {
     }
 
     try {
-      fs.accessSync(dir, fs.constants.W_OK); // Check for writable access
+      fs.accessSync(dir, fs.constants.W_OK);
     } catch (error) {
       throw new Error(`Directory is not writable: ${dir}`);
     }
 
-    this.stream = fs.createWriteStream(filePath, { flags: 'a' });
+    // Initialize writable stream
+    this.stream = fs.createWriteStream(filePath, { flags: "a" }); // Append mode
     if (!this.stream) {
       throw new Error("Failed to initialize file stream.");
     }
   }
 
-  async write(data) {
-    if (!Array.isArray(data)) {
-      throw new Error('Invalid data: Data to write must be an array of strings.');
+  /**
+   * Writes a single SQL statement to the output file.
+   * @param {string} sql - The SQL statement to write.
+   * @returns {Promise<void>} - Resolves when the write completes.
+   */
+  async write(sql) {
+    if (typeof sql !== "string") {
+      throw new Error("Invalid data: Data to write must be a string.");
     }
 
-    if (!this.stream) {
-      throw new Error('File stream is not initialized.');
-    }
-
-    const content = data.join('\n') + '\n';
     return new Promise((resolve, reject) => {
-      this.stream.write(content, (err) => {
+      this.stream.write(`${sql}\n`, (err) => {
         if (err) {
           return reject(new Error(`Error writing to file: ${err.message}`));
         }
@@ -45,6 +46,10 @@ class FileWriter {
     });
   }
 
+  /**
+   * Closes the writable stream.
+   * @returns {Promise<void>} - Resolves when the stream is closed.
+   */
   close() {
     return new Promise((resolve, reject) => {
       if (!this.stream) {
