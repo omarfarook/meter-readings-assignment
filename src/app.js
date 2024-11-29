@@ -1,9 +1,11 @@
-const { processFile } = require('./fileProcessor');
+const { processCsv } = require('./services/csvProcessor');
 
-// Example usage
-const inputFile = 'data/example-data.txt'; // Input file path
-const outputFile = 'data/output.sql'; // Output file path
-
-processFile(inputFile, outputFile).catch((error) => {
-  console.error('Error processing file:', error);
-});
+(async () => {
+  try {
+    const inputFile = 'data/example-data.csv'; // Input CSV file path
+    const outputFile = 'data/output.sql';     // Output SQL file path
+    await processCsv(inputFile, outputFile);
+  } catch (error) {
+    console.error('Error processing file:', error);
+  }
+})();

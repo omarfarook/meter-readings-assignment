@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 
 /**
- * Generates an SQL INSERT statement.
+ * Generates an SQL INSERT statement for a single reading.
  * @param {string} nmi - NMI value.
  * @param {string} timestamp - Timestamp.
  * @param {string} consumption - Consumption value.

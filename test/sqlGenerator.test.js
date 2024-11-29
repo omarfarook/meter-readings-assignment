@@ -1,4 +1,4 @@
-const { generateInsertStatement } = require('../src/sqlGenerator');
+const { generateInsertStatement } = require('../src/services/sqlGenerator');
 const { validate: isUuid } = require('uuid');
 
 describe('generateInsertStatement', () => {
@@ -14,7 +14,7 @@ describe('generateInsertStatement', () => {
     expect(sql).toContain(`'${timestamp}'`);
     expect(sql).toContain(consumption.toString());
 
-    // Validate UUID generation
+    // Validate UUID in the SQL statement
     const match = sql.match(/VALUES \('([a-f0-9-]+)'/);
     expect(match).not.toBeNull();
     expect(isUuid(match[1])).toBe(true);

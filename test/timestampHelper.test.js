@@ -1,4 +1,4 @@
-const { calculateTimestamp } = require('../src/utils');
+const { calculateTimestamp } = require('../src/services/timestampHelper');
 
 describe('calculateTimestamp', () => {
   it('should calculate the correct timestamp for the first interval', () => {
