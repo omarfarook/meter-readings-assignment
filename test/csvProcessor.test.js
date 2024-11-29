@@ -49,6 +49,7 @@ describe("processCsv", () => {
 
     fileWriterMock = {
       write: jest.fn(),
+      close: jest.fn(() => Promise.resolve()), // Added close method to mock
     };
   });
 
@@ -70,6 +71,7 @@ describe("processCsv", () => {
 
     // Problematic rows logged
     expect(csvParserMock.reportIssues).toHaveBeenCalled();
+    expect(fileWriterMock.close).toHaveBeenCalled(); // Ensure close is called
   });
 
   it("should handle an empty file gracefully", async () => {
@@ -79,32 +81,27 @@ describe("processCsv", () => {
       stream.push(null); // End of stream
       return stream;
     });
-
-    await processCsv(
-      fileReaderMock,
-      csvParserMock,
-      sqlGeneratorMock,
-      fileWriterMock
-    );
-
-    expect(csvParserMock.parseRow).not.toHaveBeenCalled();
-    expect(sqlGeneratorMock.generateInsertStatement).not.toHaveBeenCalled();
-    expect(fileWriterMock.write).toHaveBeenCalledWith([]);
-    expect(csvParserMock.reportIssues).toHaveBeenCalled();
+  
+    await processCsv(fileReaderMock, csvParserMock, sqlGeneratorMock, fileWriterMock);
+  
+    expect(csvParserMock.parseRow).not.toHaveBeenCalled(); // No rows to parse
+    expect(sqlGeneratorMock.generateInsertStatement).not.toHaveBeenCalled(); // No SQL to generate
+    expect(fileWriterMock.write).toHaveBeenCalledWith([]); // Ensure empty array is written
+    expect(csvParserMock.reportIssues).toHaveBeenCalled(); // Issues reported
+    expect(fileWriterMock.close).toHaveBeenCalled(); // Stream closed
   });
+  
 
   it("should throw an error if FileReader fails", async () => {
     fileReaderMock.stream = jest.fn(() => {
       throw new Error("FileReader error");
     });
-
+  
     await expect(
-      processCsv(
-        fileReaderMock,
-        csvParserMock,
-        sqlGeneratorMock,
-        fileWriterMock
-      )
+      processCsv(fileReaderMock, csvParserMock, sqlGeneratorMock, fileWriterMock)
     ).rejects.toThrow("FileReader error");
+  
+    expect(fileWriterMock.close).toHaveBeenCalled(); // Ensure close is still called
   });
+  
 });

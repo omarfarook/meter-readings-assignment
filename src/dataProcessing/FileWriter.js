@@ -1,4 +1,5 @@
-const fs = require("fs");
+const fs = require('fs');
+const path = require('path');
 
 class FileWriter {
   constructor(filePath) {
@@ -6,39 +7,57 @@ class FileWriter {
       throw new Error("Invalid filePath: A valid file path must be provided.");
     }
 
-    const dir = require('path').dirname(filePath);
+    const dir = path.dirname(filePath);
 
     if (!fs.existsSync(dir)) {
       throw new Error(`Directory does not exist: ${dir}`);
     }
 
     try {
-      fs.accessSync(dir, fs.constants.W_OK);
+      fs.accessSync(dir, fs.constants.W_OK); // Check for writable access
     } catch (error) {
       throw new Error(`Directory is not writable: ${dir}`);
     }
 
-    this.filePath = filePath;
+    this.stream = fs.createWriteStream(filePath, { flags: 'a' });
+    if (!this.stream) {
+      throw new Error("Failed to initialize file stream.");
+    }
   }
 
-  /**
-   * Writes data to the file.
-   * @param {Array<string>} data - Array of SQL statements.
-   */
-  write(data) {
+  async write(data) {
     if (!Array.isArray(data)) {
-      throw new Error(
-        "Invalid data: Data to write must be an array of strings."
-      );
+      throw new Error('Invalid data: Data to write must be an array of strings.');
     }
 
-    try {
-      fs.writeFileSync(this.filePath, data.join("\n"));
-    } catch (error) {
-      throw new Error(
-        `Error writing to file at ${this.filePath}: ${error.message}`
-      );
+    if (!this.stream) {
+      throw new Error('File stream is not initialized.');
     }
+
+    const content = data.join('\n') + '\n';
+    return new Promise((resolve, reject) => {
+      this.stream.write(content, (err) => {
+        if (err) {
+          return reject(new Error(`Error writing to file: ${err.message}`));
+        }
+        resolve();
+      });
+    });
+  }
+
+  close() {
+    return new Promise((resolve, reject) => {
+      if (!this.stream) {
+        return resolve();
+      }
+
+      this.stream.end((err) => {
+        if (err) {
+          return reject(new Error(`Error closing file stream: ${err.message}`));
+        }
+        resolve();
+      });
+    });
   }
 }
 
