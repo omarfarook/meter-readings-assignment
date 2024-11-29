@@ -1,0 +1,22 @@
+{
+    "name": "meter-readings-assignment",
+    "version": "1.0.0",
+    "description": "A Node.js application to parse NEM12 files and generate SQL insert statements for bulk database insertion.",
+    "main": "src/app.js",
+    "scripts": {
+      "start": "node src/app.js",
+      "test": "jest",
+      "lint": "eslint ."
+    },
+    "keywords": ["NEM12", "meter readings", "SQL generation", "Node.js"],
+    "author": "Omar Farook",
+    "license": "MIT",
+    "dependencies": {
+      "csv-parser": "^3.0.0",
+      "uuid": "^9.0.0"
+    },
+    "devDependencies": {
+      "jest": "^29.0.0"
+    }
+  }
+  
