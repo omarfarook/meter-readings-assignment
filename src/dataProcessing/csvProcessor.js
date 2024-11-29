@@ -14,24 +14,35 @@
  */
 async function processCsv(fileReader, csvParser, sqlGenerator, fileWriter) {
   const sqlStatements = [];
+  let successfulRows = 0;
 
   for await (const row of fileReader.stream()) {
-    const parsedData = csvParser.parseRow(row);
+    try {
+      const parsedData = csvParser.parseRow(row);
 
-    if (parsedData) {
-      parsedData.forEach(({ nmi, timestamp, consumption }) => {
-        const sql = sqlGenerator.generateInsertStatement(
-          nmi,
-          timestamp,
-          consumption
-        );
-        sqlStatements.push(sql);
-      });
+      if (parsedData) {
+        parsedData.forEach(({ nmi, timestamp, consumption }) => {
+          const sql = sqlGenerator.generateInsertStatement(
+            nmi,
+            timestamp,
+            consumption
+          );
+          sqlStatements.push(sql);
+          successfulRows++;
+        });
+      }
+    } catch (error) {
+      console.error(`Error processing row: ${JSON.stringify(row)} - ${error.message}`);
     }
   }
 
   fileWriter.write(sqlStatements);
-  console.log("SQL statements successfully written to the output file.");
+
+  // Log issues identified by CsvParser
+  csvParser.reportIssues();
+
+  // Display a summary of processing
+  console.log(`Successfully processed rows: ${successfulRows}`);
 }
 
 module.exports = { processCsv };

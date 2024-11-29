@@ -3,15 +3,24 @@ const csv = require('csv-parser');
 
 class FileReader {
   constructor(filePath) {
+    if (!filePath || typeof filePath !== 'string') {
+      throw new Error('Invalid filePath: A valid file path must be provided.');
+    }
+  
     this.filePath = filePath;
   }
 
-  /**
+/**
    * Creates a readable stream for the file.
-   * @returns {ReadableStream} - A stream of file data.
+   * @returns {ReadableStream} - A readable stream for the file.
+   * @throws {Error} - Throws an error if the file cannot be read.
    */
   stream() {
-    return fs.createReadStream(this.filePath).pipe(csv({ headers: false }));
+    try {
+      return fs.createReadStream(this.filePath).pipe(csv({ headers: false }));
+    } catch (error) {
+      throw new Error(`Error reading file at ${this.filePath}: ${error.message}`);
+    }
   }
 }
 

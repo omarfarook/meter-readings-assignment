@@ -1,10 +1,15 @@
-const { calculateTimestamp } = require('./timestampHelper');
-const { RECORD_TYPES, COLUMN_INDICES } = require('../constants');
+const { calculateTimestamp, isValidDate } = require("./timestampHelper");
+const {
+  RECORD_TYPES,
+  COLUMN_INDICES,
+  MINUTES_IN_A_DAY,
+} = require("../constants");
 
 class CsvParser {
   constructor() {
     this.currentNmi = null;
     this.intervalLength = null;
+    this.problematicRows = [];
   }
 
   /**
@@ -13,33 +18,91 @@ class CsvParser {
    * @returns {Object|null} - Parsed data or null if the row is not relevant.
    */
   parseRow(row) {
-    const fields = Object.values(row);
+    const fields = Array.from({
+      length: Math.max(...Object.keys(row).map(Number)) + 1,
+    }).map((_, index) => row[index] || null);
 
-    if (fields[COLUMN_INDICES.RECORD_TYPE] === RECORD_TYPES.TYPE_200) {
+    const recordType = fields[COLUMN_INDICES.RECORD_TYPE];
+
+    if (recordType === RECORD_TYPES.TYPE_200) {
       this.currentNmi = fields[COLUMN_INDICES.NMI];
-      this.intervalLength = parseInt(fields[COLUMN_INDICES.INTERVAL_LENGTH], 10);
+      this.intervalLength = parseInt(
+        fields[COLUMN_INDICES.INTERVAL_LENGTH],
+        10
+      );
       return null;
     }
 
-    if (fields[COLUMN_INDICES.RECORD_TYPE] === RECORD_TYPES.TYPE_300 && this.currentNmi) {
+    if (recordType === RECORD_TYPES.TYPE_300 && this.currentNmi) {
       const intervalDate = fields[COLUMN_INDICES.INTERVAL_DATE];
-      const intervalsPerDay = Math.floor(1440 / this.intervalLength);
-      const consumptions = fields.slice(COLUMN_INDICES.CONSUMPTION_START, 2 + intervalsPerDay);
 
-      return consumptions.map((value, index) => {
-        if (value && !isNaN(value)) {
-          const timestamp = calculateTimestamp(intervalDate, this.intervalLength, index);
-          if (!timestamp) {
-            console.warn(`Invalid timestamp for date: ${intervalDate}, index: ${index}`);
+      if (!isValidDate(intervalDate)) {
+        this.problematicRows.push({
+          row,
+          reason: `Invalid interval date: ${intervalDate}`,
+        });
+        return null;
+      }
+
+      const intervalsPerDay = Math.floor(
+        MINUTES_IN_A_DAY / this.intervalLength
+      );
+      const consumptions = fields.slice(
+        COLUMN_INDICES.CONSUMPTION_START,
+        COLUMN_INDICES.CONSUMPTION_START + intervalsPerDay
+      );
+
+      return consumptions
+        .map((value, index) => {
+          if (value && !isNaN(value)) {
+            const timestamp = calculateTimestamp(
+              intervalDate,
+              this.intervalLength,
+              index
+            );
+            if (!timestamp) {
+              this.problematicRows.push({
+                row,
+                reason: `Invalid timestamp at index ${index}`,
+              });
+              return null;
+            }
+            return {
+              nmi: this.currentNmi,
+              timestamp,
+              consumption: parseFloat(value),
+            };
+          } else {
+            this.problematicRows.push({
+              row,
+              reason: `Invalid consumption value: ${value} at index ${index}`,
+            });
             return null;
           }
-          return { nmi: this.currentNmi, timestamp, consumption: parseFloat(value) };
-        }
-        return null;
-      }).filter(Boolean);
+        })
+        .filter(Boolean);
     }
 
+    // Log unrecognized rows
+    this.problematicRows.push({
+      row,
+      reason: `Unrecognized record type: ${recordType}`,
+    });
     return null;
+  }
+
+  /**
+   * Reports all problematic rows encountered during parsing.
+   */
+  reportIssues() {
+    if (this.problematicRows.length > 0) {
+      console.warn("The following rows were problematic:");
+      this.problematicRows.forEach(({ row, reason }) => {
+        console.warn(`Row: ${JSON.stringify(row)} - Reason: ${reason}`);
+      });
+    } else {
+      console.log("No issues detected during parsing.");
+    }
   }
 }
 

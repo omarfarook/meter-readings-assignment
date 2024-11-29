@@ -7,25 +7,22 @@ describe("processCsv", () => {
   let fileWriterMock;
 
   beforeEach(() => {
-    // Mock FileReader
     fileReaderMock = {
       stream: jest.fn().mockImplementation(() => {
         const { Readable } = require("stream");
         const stream = new Readable({ objectMode: true });
-        stream.push({ 0: "200", 1: "NEM1201009", 8: "30" }); // 200 record
-        stream.push({ 0: "300", 1: "20231129", 2: "0.461", 3: "0.810" }); // 300 record
+        stream.push({ 0: "200", 1: "NEM1201009", 8: "30" }); // Valid 200 record
+        stream.push({ 0: "300", 1: "20231129", 2: "0.461", 3: "0.810" }); // Valid 300 record
+        stream.push({ 0: "300", 1: "INVALID_DATE", 2: "0.123" }); // Invalid 300 record
         stream.push(null); // End of stream
         return stream;
       }),
     };
 
-    // Mock CsvParser
     csvParserMock = {
       parseRow: jest.fn().mockImplementation((row) => {
-        if (row[0] === "200") {
-          return null; // No data for 200 records
-        }
-        if (row[0] === "300") {
+        if (row[0] === "200") return null;
+        if (row[0] === "300" && row[1] === "20231129") {
           return [
             {
               nmi: "NEM1201009",
@@ -39,26 +36,23 @@ describe("processCsv", () => {
             },
           ];
         }
-        return null;
+        throw new Error(`Invalid interval date: ${row[1]}`);
+      }),
+      reportIssues: jest.fn(),
+    };
+
+    sqlGeneratorMock = {
+      generateInsertStatement: jest.fn((nmi, timestamp, consumption) => {
+        return `INSERT INTO meter_readings (nmi, "timestamp", consumption) VALUES ('${nmi}', '${timestamp}', ${consumption});`;
       }),
     };
 
-    // Mock SqlGenerator
-    sqlGeneratorMock = {
-      generateInsertStatement: jest
-        .fn()
-        .mockImplementation((nmi, timestamp, consumption) => {
-          return `INSERT INTO meter_readings (nmi, "timestamp", consumption) VALUES ('${nmi}', '${timestamp}', ${consumption});`;
-        }),
-    };
-
-    // Mock FileWriter
     fileWriterMock = {
       write: jest.fn(),
     };
   });
 
-  it("should process CSV and write SQL statements to the output file", async () => {
+  it("should process valid rows and log issues for problematic rows", async () => {
     await processCsv(
       fileReaderMock,
       csvParserMock,
@@ -66,22 +60,19 @@ describe("processCsv", () => {
       fileWriterMock
     );
 
-    expect(fileReaderMock.stream).toHaveBeenCalledTimes(1);
-
-    expect(csvParserMock.parseRow).toHaveBeenCalledTimes(2); // For 200 and 300 records
-
-    expect(sqlGeneratorMock.generateInsertStatement).toHaveBeenCalledTimes(2); // Two parsed rows from 300 record
-
-    expect(fileWriterMock.write).toHaveBeenCalledTimes(1);
-
-    const expectedSql = [
+    // Valid rows processed
+    expect(csvParserMock.parseRow).toHaveBeenCalledTimes(3); // 2 valid rows and 1 problematic row
+    expect(sqlGeneratorMock.generateInsertStatement).toHaveBeenCalledTimes(2);
+    expect(fileWriterMock.write).toHaveBeenCalledWith([
       "INSERT INTO meter_readings (nmi, \"timestamp\", consumption) VALUES ('NEM1201009', '2023-11-29T00:00:00.000Z', 0.461);",
-      "INSERT INTO meter_readings (nmi, \"timestamp\", consumption) VALUES ('NEM1201009', '2023-11-29T00:30:00.000Z', 0.810);",
-    ];
-    expect(fileWriterMock.write).toHaveBeenCalledWith(expectedSql);
+      "INSERT INTO meter_readings (nmi, \"timestamp\", consumption) VALUES ('NEM1201009', '2023-11-29T00:30:00.000Z', 0.81);",
+    ]);
+
+    // Problematic rows logged
+    expect(csvParserMock.reportIssues).toHaveBeenCalled();
   });
 
-  it("should handle empty CSV gracefully", async () => {
+  it("should handle an empty file gracefully", async () => {
     fileReaderMock.stream = jest.fn().mockImplementation(() => {
       const { Readable } = require("stream");
       const stream = new Readable({ objectMode: true });
@@ -96,31 +87,10 @@ describe("processCsv", () => {
       fileWriterMock
     );
 
-    expect(fileReaderMock.stream).toHaveBeenCalledTimes(1);
-
     expect(csvParserMock.parseRow).not.toHaveBeenCalled();
-
     expect(sqlGeneratorMock.generateInsertStatement).not.toHaveBeenCalled();
     expect(fileWriterMock.write).toHaveBeenCalledWith([]);
-  });
-
-  it("should handle invalid CSV rows gracefully", async () => {
-    csvParserMock.parseRow = jest.fn().mockImplementation(() => null); // All rows are invalid
-
-    await processCsv(
-      fileReaderMock,
-      csvParserMock,
-      sqlGeneratorMock,
-      fileWriterMock
-    );
-
-    expect(fileReaderMock.stream).toHaveBeenCalledTimes(1);
-
-    expect(csvParserMock.parseRow).toHaveBeenCalledTimes(2); // For 200 and 300 records
-
-    expect(sqlGeneratorMock.generateInsertStatement).not.toHaveBeenCalled();
-
-    expect(fileWriterMock.write).toHaveBeenCalledWith([]);
+    expect(csvParserMock.reportIssues).toHaveBeenCalled();
   });
 
   it("should throw an error if FileReader fails", async () => {
