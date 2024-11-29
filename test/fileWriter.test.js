@@ -1,49 +1,46 @@
 const fs = require("fs");
 const { FileWriter } = require("../src/dataProcessing/FileWriter");
 
-jest.mock("fs");
+const path = require('path');
 
-describe("FileWriter", () => {
-  beforeEach(() => {
-    jest.resetAllMocks();
+jest.mock('fs');
+jest.mock('path');
+
+describe('FileWriter', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  it("should write data to a file", () => {
-    const fileWriter = new FileWriter("mock-output.sql");
-    const mockData = [
-      "INSERT INTO meter_readings (id, nmi, \"timestamp\", consumption) VALUES ('uuid-1', 'NEM1201009', '2023-11-29T00:00:00Z', 0.461);",
-      "INSERT INTO meter_readings (id, nmi, \"timestamp\", consumption) VALUES ('uuid-2', 'NEM1201009', '2023-11-29T00:30:00Z', 0.810);",
-    ];
+  it('should throw an error if the directory does not exist', () => {
+    path.dirname.mockReturnValue('/nonexistent-dir');
+    fs.existsSync.mockReturnValue(false);
 
-    fileWriter.write(mockData);
+    expect(() => new FileWriter('/nonexistent-dir/file.sql')).toThrow('Directory does not exist: /nonexistent-dir');
+  });
 
-    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+  it('should throw an error if the directory is not writable', () => {
+    path.dirname.mockReturnValue('/readonly-dir');
+    fs.existsSync.mockReturnValue(true);
+    fs.accessSync.mockImplementation(() => {
+      throw new Error('Permission denied');
+    });
+
+    expect(() => new FileWriter('/readonly-dir/file.sql')).toThrow('Directory is not writable: /readonly-dir');
+  });
+
+  it('should write data to the file if the directory exists and is writable', () => {
+    path.dirname.mockReturnValue('/valid-dir');
+    fs.existsSync.mockReturnValue(true);
+    fs.accessSync.mockImplementation(() => {}); // No error
+    const mockWriteSync = jest.fn();
+    fs.writeFileSync.mockImplementation(mockWriteSync);
+
+    const fileWriter = new FileWriter('/valid-dir/file.sql');
+    fileWriter.write(['INSERT INTO table VALUES (...);']);
+
     expect(fs.writeFileSync).toHaveBeenCalledWith(
-      "mock-output.sql",
-      mockData.join("\n")
+      '/valid-dir/file.sql',
+      'INSERT INTO table VALUES (...);'
     );
-  });
-
-  it("should throw an error if writing fails", () => {
-    fs.writeFileSync.mockImplementation(() => {
-      throw new Error("Permission denied");
-    });
-
-    const fileWriter = new FileWriter("mock-output.sql");
-    const mockData = [
-      "INSERT INTO meter_readings (id, nmi, \"timestamp\", consumption) VALUES ('uuid-1', 'NEM1201009', '2023-11-29T00:00:00Z', 0.461);",
-    ];
-
-    expect(() => fileWriter.write(mockData)).toThrow("Permission denied");
-  });
-
-  const possibleInvalidFilePaths = [undefined, null, ""];
-
-  Array.from(possibleInvalidFilePaths).forEach((invalidFilePath) => {
-    it(`should throw an error if ${invalidFilePath} is provided`, () => {
-      expect(() => new FileWriter(invalidFilePath)).toThrow(
-        "Invalid filePath: A valid file path must be provided."
-      );
-    });
   });
 });

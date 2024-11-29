@@ -6,6 +6,18 @@ class FileWriter {
       throw new Error("Invalid filePath: A valid file path must be provided.");
     }
 
+    const dir = require('path').dirname(filePath);
+
+    if (!fs.existsSync(dir)) {
+      throw new Error(`Directory does not exist: ${dir}`);
+    }
+
+    try {
+      fs.accessSync(dir, fs.constants.W_OK);
+    } catch (error) {
+      throw new Error(`Directory is not writable: ${dir}`);
+    }
+
     this.filePath = filePath;
   }
 

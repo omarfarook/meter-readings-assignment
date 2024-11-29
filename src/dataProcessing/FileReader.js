@@ -6,6 +6,16 @@ class FileReader {
     if (!filePath || typeof filePath !== 'string') {
       throw new Error('Invalid filePath: A valid file path must be provided.');
     }
+    
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File does not exist at path: ${filePath}`);
+    }
+
+    try {
+      fs.accessSync(filePath, fs.constants.R_OK);
+    } catch (error) {
+      throw new Error(`File is not readable at path: ${filePath}`);
+    }
   
     this.filePath = filePath;
   }
