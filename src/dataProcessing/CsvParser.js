@@ -96,7 +96,9 @@ class CsvParser {
    */
   reportIssues() {
     if (this.invalidRows.length > 0) {
-      console.warn(`The following rows were invalid (Total: ${this.invalidRows.length}):`);
+      console.warn(
+        `The following rows were invalid (Total: ${this.invalidRows.length}):`
+      );
       this.invalidRows.forEach(({ row, reason }) => {
         console.warn(`Row: ${JSON.stringify(row)} - Reason: ${reason}`);
       });

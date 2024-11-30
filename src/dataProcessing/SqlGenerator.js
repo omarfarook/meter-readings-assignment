@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require("uuid");
 
 class SqlGenerator {
   /**
@@ -10,9 +10,9 @@ class SqlGenerator {
    * @throws {Error} - If any required field is missing.
    */
   generateInsertStatement(nmi, timestamp, consumption) {
-    if (!nmi) throw new Error('NMI is required');
-    if (!timestamp) throw new Error('Timestamp is required');
-    if (consumption == null) throw new Error('Consumption is required');
+    if (!nmi) throw new Error("NMI is required");
+    if (!timestamp) throw new Error("Timestamp is required");
+    if (consumption == null) throw new Error("Consumption is required");
 
     const id = uuidv4();
     return `INSERT INTO meter_readings (id, nmi, "timestamp", consumption) VALUES ('${id}', '${nmi}', '${timestamp}', ${consumption});`;

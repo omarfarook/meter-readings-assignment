@@ -5,7 +5,7 @@
  *  - Parses each row using the CsvParser instance.
  *  - Generates SQL insert statements using the SqlGenerator instance.
  *  - Writes the generated SQL statements directly to the output file stream using the FileWriter instance.
- * 
+ *
  * This implementation ensures scalability by streaming SQL statements directly to the output file
  * as they are generated, without storing them in memory.
  *
@@ -30,13 +30,11 @@ async function processCsv(fileReader, csvParser, sqlGenerator, fileWriter) {
   let invalidRows = 0;
 
   try {
-    // Stream input rows from FileReader
     for await (const row of fileReader.stream()) {
       totalRows++;
       try {
         const parsedData = csvParser.parseRow(row);
 
-        // If the row is successfully parsed, process its data
         if (parsedData) {
           for (const { nmi, timestamp, consumption } of parsedData) {
             const sql = sqlGenerator.generateInsertStatement(
@@ -45,14 +43,12 @@ async function processCsv(fileReader, csvParser, sqlGenerator, fileWriter) {
               consumption
             );
 
-            // Write each SQL statement directly to the output stream
             await fileWriter.write(sql);
 
             successfulRows++;
           }
         }
       } catch (error) {
-        // Increment invalid rows count and log the error
         invalidRows++;
         console.error(
           `Error processing row: ${JSON.stringify(row)} - ${error.message}`
@@ -60,9 +56,8 @@ async function processCsv(fileReader, csvParser, sqlGenerator, fileWriter) {
       }
     }
 
-    // Explicitly handle case where no rows are processed
     if (successfulRows === 0) {
-      await fileWriter.write([]); // Write an empty array to signify no data
+      await fileWriter.write([]);
     }
   } catch (error) {
     console.error(`Error reading file: ${error.message}`);
